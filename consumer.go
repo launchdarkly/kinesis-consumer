@@ -136,7 +136,7 @@ func (c *Consumer) ScanShard(ctx context.Context, shardID string, fn ScanFunc) e
 	}
 
 	// get shard iterator
-	shardIterator, err := c.getShardIterator(c.streamName, shardID, lastSeqNum)
+	shardIterator, err := c.getShardIterator(ctx, c.streamName, shardID, lastSeqNum)
 	if err != nil {
 		return fmt.Errorf("get shard iterator error: %v", err)
 	}
@@ -157,7 +157,7 @@ func (c *Consumer) ScanShard(ctx context.Context, shardID string, fn ScanFunc) e
 
 			// attempt to recover from GetRecords error by getting new shard iterator
 			if err != nil {
-				shardIterator, err = c.getShardIterator(c.streamName, shardID, lastSeqNum)
+				shardIterator, err = c.getShardIterator(ctx, c.streamName, shardID, lastSeqNum)
 				if err != nil {
 					return fmt.Errorf("get shard iterator error: %v", err)
 				}
@@ -200,7 +200,7 @@ func isShardClosed(nextShardIterator, currentShardIterator *string) bool {
 	return nextShardIterator == nil || currentShardIterator == nextShardIterator
 }
 
-func (c *Consumer) getShardIterator(streamName, shardID, seqNum string) (*string, error) {
+func (c *Consumer) getShardIterator(ctx context.Context, streamName, shardID, seqNum string) (*string, error) {
 	params := &kinesis.GetShardIteratorInput{
 		ShardId:    aws.String(shardID),
 		StreamName: aws.String(streamName),
@@ -216,6 +216,6 @@ func (c *Consumer) getShardIterator(streamName, shardID, seqNum string) (*string
 		params.ShardIteratorType = aws.String(c.initialShardIteratorType)
 	}
 
-	res, err := c.client.GetShardIterator(params)
+	res, err := c.client.GetShardIteratorWithContext(aws.Context(ctx), params)
 	return res.ShardIterator, err
 }
